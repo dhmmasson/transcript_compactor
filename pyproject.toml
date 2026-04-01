@@ -23,4 +23,5 @@ major_version_zero = true
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.1.0",
+    "pyyaml>=6.0.3",
 ]

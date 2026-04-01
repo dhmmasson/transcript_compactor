@@ -63,11 +63,11 @@ class TestRunPipeline:
 
 class TestRunPipelineBlacklistIntegration:
     def test_applies_blacklist_when_enabled(self):
-        """Nominal: blacklist-enabled pipeline removes configured stopwords/fillers."""
+        """Nominal: blacklist-enabled pipeline removes determiners."""
         config = PipelineConfig(blacklist=True)
         text = "This is the basic idea of the technique."
         result = run_pipeline(text, config)
-        assert result == "This basic idea technique."
+        assert result == "is basic idea of technique."
 
     def test_keeps_pass_through_when_blacklist_disabled(self):
         """Nominal: disabling blacklist keeps existing pass-through behavior."""

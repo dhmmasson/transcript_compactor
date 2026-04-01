@@ -52,6 +52,7 @@ All flags are opt-in. No flag disables another.
 |---|---|
 | `file [file ...]` | one or more `.txt` files **or** a folder path |
 | `--blacklist` | Phase 1: stopwords + fillers + sponsor/intro removal |
+| `--blacklist-file PATH` | custom blacklist words file (one word/line), used by `--blacklist` |
 | `--frequency` | Phase 2: high-frequency token removal |
 | `--freq-threshold FLOAT` | cutoff for Phase 2 (default: `0.02`) |
 | `--nlp` | Phase 3: spaCy POS-based filtering |
@@ -94,13 +95,26 @@ Handled in `main()` before the pipeline runs:
 
 **Module**: `compactor/blacklist.py`
 
-1. Token-level removal using `data/stopwords.txt` (articles, copulas, prepositions: "the", "a", "is"…)
+1. Token-level removal using a customizable blacklist source
+    - Resolution order:
+       1. `--blacklist-file PATH` (CLI override)
+       2. local `blacklist.txt` in working directory
+       3. built-in fallback defaults
+    - Built-in fallback defaults (explicit):
+       `the`, `a`, `an`, `of`, `to`, `and`, `in`, `is`, `it`, `that`, `for`, `on`, `with`, `as`, `at`, `by`, `from`, `be`, `are`, `was`, `were`
 2. Token-level removal using `data/fillers.txt` ("um", "uh", "like", "you know", "basically"…)
 3. Sentence-level regex filter: sponsor / intro / outro patterns
    - "sponsored by", "use code", "promo code"
    - "hello everyone", "welcome back", "in today's video"
    - "don't forget to like", "hit the subscribe button", "see you in the next"
 4. Optional timestamp stripping via `--strip-timestamps` (`[00:12]`, `0:12`, `00:12:34` patterns)
+
+### Phase 1 architecture notes
+
+- Blacklist file format: UTF-8 text, one word or phrase per line; empty lines and `#` comments ignored.
+- Matching remains case-insensitive.
+- Tests must read the active blacklist source so behavior validates against the real loaded list.
+- A later validation task will ensure default blacklist coverage remains sufficient.
 
 ---
 

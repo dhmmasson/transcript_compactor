@@ -2,79 +2,56 @@
 #
 # Phase 1 is one operation: remove every token that appears in a blacklist.
 # No filler categories, no regex patterns — just a flat word list.
+#
+# Default blacklist: the, a, an, this, that, those, these (determiners only).
+# Punctuation rule: when a word is removed, its attached punctuation is
+# preserved. Adjacent punctuation marks are then cleaned up (remove in
+# priority order: comma < semicolon < period < ! < ?).
+#
+# Test cases for blacklist removal + punctuation are generated from
+# tests/generate_blacklist_cases.py → tests/blacklist_cases.yaml
+# The YAML is the source of truth for expected I/O.
+
+from pathlib import Path
+
+import pytest
+import yaml
 
 from compactor.blacklist import apply_blacklist
 
+CASES_PATH = Path(__file__).parent / "blacklist_cases.yaml"
 
-class TestApplyBlacklist:
-    def test_removes_default_blacklist_words_from_sentence(self):
-        """Nominal (example 1): default stopwords are removed, meaning words stay."""
-        # Arrange
-        text = "This is the basic idea of the technique."
 
-        # Act
-        result = apply_blacklist(text)
+def _load_cases() -> list[dict]:
+    return yaml.safe_load(CASES_PATH.read_text(encoding="utf-8"))
 
-        # Assert
-        assert result == "This basic idea technique."
 
-    def test_case_insensitive_matching(self):
-        """Nominal (example 3): uppercase blacklist words are removed too."""
-        # Arrange
-        text = "The idea of the method is clear."
+def _case_ids() -> list[str]:
+    """Short test IDs from rationale (first 60 chars)."""
+    return [c["rationale"][:60] for c in _load_cases()]
 
-        # Act
-        result = apply_blacklist(text)
 
-        # Assert
-        assert result == "idea method clear."
+class TestApplyBlacklistFromYAML:
+    """All blacklist removal + punctuation cases loaded from YAML."""
 
-    def test_preserves_words_not_in_blacklist(self):
-        """Nominal (example 2): near-matches like 'liked' vs 'like' both stay."""
-        # Arrange
-        text = "If you liked the video, click the like button and subscribe."
+    @pytest.mark.parametrize("case", _load_cases(), ids=_case_ids())
+    def test_blacklist_case(self, case, tmp_path, monkeypatch):
+        # Ensure no local blacklist.txt interferes — run from empty dir
+        monkeypatch.chdir(tmp_path)
 
-        # Act
-        result = apply_blacklist(text)
+        result = apply_blacklist(case["input"])
 
-        # Assert
-        assert result == "If you liked video, click like button subscribe."
+        assert result == case["output"], (
+            f"\nRationale: {case['rationale']}\n"
+            f"  Input:    {case['input']!r}\n"
+            f"  Expected: {case['output']!r}\n"
+            f"  Got:      {result!r}"
+        )
 
-    def test_no_blacklist_words_present_unchanged(self):
-        """Edge (example 4): text with no blacklist words passes through unchanged."""
-        # Arrange
-        text = "Erosion gradients generate branching gullies."
 
-        # Act
-        result = apply_blacklist(text)
-
-        # Assert
-        assert result == "Erosion gradients generate branching gullies."
-
-    def test_normalizes_whitespace_after_removals(self):
-        """Edge (example 5): extra spaces from removed tokens are collapsed."""
-        # Arrange
-        text = "Well, this is, like, basically, a test."
-
-        # Act
-        result = apply_blacklist(text)
-
-        # Assert
-        assert result == "Well, this like, basically, test."
-
-    def test_empty_input_returns_empty_output(self):
-        """Edge: empty input remains empty without errors."""
-        # Arrange
-        text = ""
-
-        # Act
-        result = apply_blacklist(text)
-
-        # Assert
-        assert result == ""
-
+class TestApplyBlacklistSource:
     def test_uses_custom_blacklist_file(self, tmp_path):
-        """Nominal (example 6): explicit blacklist file overrides defaults."""
+        """Nominal: explicit blacklist file overrides defaults."""
         # Arrange
         custom_blacklist = tmp_path / "custom_blacklist.txt"
         custom_blacklist.write_text("erosion\ngradients\n", encoding="utf-8")
@@ -109,5 +86,5 @@ class TestApplyBlacklist:
         # Act
         result = apply_blacklist(text)
 
-        # Assert
-        assert result == "idea method clear."
+        # Assert — only "The" and "the" removed (determiners); "of", "is" stay
+        assert result == "idea of method is clear."
