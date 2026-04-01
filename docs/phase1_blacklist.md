@@ -79,45 +79,70 @@ Default fallback blacklist:
 
 ## Implementation Plan
 
-### `compactor/blacklist.py` — single module, two functions
+### `compactor/blacklist.py` — single module, three functions
 
 **Constants**:
-- `DEFAULT_BLACKLIST`: a `frozenset` containing the 21 default words listed in the hypothesis.
+- `DEFAULT_BLACKLIST`: a `frozenset` of 7 determiners: `the, a, an, this, that, those, these`.
+- `PUNCT_PRIORITY`: a dict mapping punctuation characters to integer priority:
+  `{',': 0, ';': 1, '.': 2, '!': 3, '?': 4}`. Higher number wins when merging.
 
-**`_load_blacklist(blacklist_file: str | None) -> set[str]`** (private):
+**`_load_blacklist(blacklist_file: str | None) -> set[str]`** (private, unchanged):
 1. If `blacklist_file` is provided and exists → read it, return `set` of lowercased non-empty lines.
 2. Else if `blacklist.txt` exists in `Path.cwd()` → read it, same format.
-3. Else → return `DEFAULT_BLACKLIST`.
+3. Else → return `set(DEFAULT_BLACKLIST)`.
 - File format: one word per line, UTF-8. Blank lines and leading/trailing whitespace ignored.
 
-**`apply_blacklist(text: str, blacklist_file: str | None = None) -> str`** (public):
-1. Call `_load_blacklist(blacklist_file)` to get the word set.
-2. If `text` is empty, return `""` immediately.
-3. Split `text` on whitespace (`str.split()`).
-4. For each token:
-   - Strip punctuation from the token to get bare word (e.g. `"is,"` → `"is"`).
-   - Compare bare word (lowercased) against the blacklist set.
-   - If match → drop the entire token (including its punctuation).
-   - If no match → keep the token as-is.
-5. Join surviving tokens with single space.
-6. Return result.
+**`_extract_trailing_punct(token: str) -> tuple[str, str]`** (private, new):
+- If the last character of `token` is in `PUNCT_PRIORITY`, return `(token[:-1], token[-1])`.
+- Otherwise return `(token, "")`.
+- Handles the single trailing punctuation character that matters for merging.
 
-**Punctuation handling detail** (critical for test correctness):
-- Example 5: `"is,"` → bare word `"is"` matches → entire token `"is,"` is removed.
-- This means `"Well, this is, like, basically, a test."` → remove `"is,"` and `"a"` → `"Well, this like, basically, test."` ✓
-- Punctuation stripping uses `str.strip(string.punctuation)` for the comparison only; the original token (with punctuation) is what gets kept or dropped.
+**`apply_blacklist(text: str, blacklist_file: str | None = None) -> str`** (public, rewritten):
 
-### `compactor/pipeline.py` — wire the blacklist phase
+Algorithm — three phases:
 
-Replace the pass-through scaffold with:
-```python
-def run_pipeline(text: str, config: PipelineConfig) -> str:
-    if config.blacklist:
-        text = apply_blacklist(text)
-    return text
-```
+**Phase A — Classify tokens**:
+1. If `text` is empty, return `""`.
+2. Split `text` on whitespace (`str.split()`).
+3. For each token, call `_extract_trailing_punct` → `(word, punct)`.
+4. Classify: if `word.lower()` is in the blacklist and `word` is non-empty → mark as removed.
+5. Store as list of `(word, punct, is_kept)`.
 
-Import `apply_blacklist` from `compactor.blacklist`.
+**Phase B — Build result with punctuation merging**:
+1. Walk through classified tokens.
+2. **Removed token**: if it has trailing punct, accumulate into a `pending_puncts` list.
+3. **Kept token**: if `pending_puncts` is non-empty:
+   - If there is a previous kept token in results:
+     - Collect the previous token's trailing punct + all `pending_puncts`.
+     - Pick the highest-priority punctuation mark (using `PUNCT_PRIORITY`).
+     - Replace the previous token's trailing punct with the winner.
+   - If there is no previous kept token (removal at start of text):
+     - Pick the highest-priority punct from `pending_puncts`.
+     - Insert a standalone punctuation token `("", best_punct)` before the current word.
+   - Clear `pending_puncts`.
+   - Append the current `(word, punct)` to results.
+4. After the loop, if `pending_puncts` remains (removals at end of text):
+   - Merge with the last kept token's trailing punct, same priority rule.
+
+**Phase C — Reconstruct**:
+1. Join `word + punct` for each result tuple with single spaces.
+2. Return the string.
+
+### Traced examples
+
+| Input | Tokens (word, punct, kept) | Pending | Result tokens | Output |
+|---|---|---|---|---|
+| `cat the.` | (cat,,✓) (the,.,✗) | [.] at end → merge to cat. | [(cat,.)] | `cat.` |
+| `cat, the; dog` | (cat,,,✓) (the,;,✗) (dog,,✓) | [;] → merge with , → ; | [(cat,;)(dog,)] | `cat; dog` |
+| `cat, the a. dog` | (cat,,,✓) (the,,✗) (a,.,✗) | [.] → merge with , → . | [(cat,.)(dog,)] | `cat. dog` |
+| `cat, the; a. this! dog` | (cat,,,✓) (the,;,✗) (a,.,✗) (this,!,✗) (dog,,✓) | [;,.!] → merge with , → ! | [(cat,!)(dog,)] | `cat! dog` |
+| `the, cat dog` | (the,,,✗) (cat,,✓) (dog,,✓) | [,] → no prev → standalone | [(,,)(cat,)(dog,)] | `, cat dog` |
+| `cat, an dog.` | (cat,,,✓) (an,,✗) (dog,.,✓) | [] (an has no punct) | [(cat,,)(dog,.)] | `cat, dog.` |
+
+### `compactor/pipeline.py` — wire the blacklist phase (already done)
+
+The pipeline already calls `apply_blacklist` when `config.blacklist` is True.
+Only `blacklist.py` needs changes.
 
 ### No changes to `main.py`
 CLI already passes `blacklist=True/False` into `PipelineConfig`. No `--blacklist-file` CLI flag yet (planned for later cycle per plan.md).
