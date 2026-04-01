@@ -15,14 +15,41 @@ def parse_args(argv=None):
         nargs="+",
         help="Path to transcript .txt file(s) or a folder containing .txt files.",
     )
-    parser.add_argument("--blacklist", action="store_true", help="Enable Phase 1: blacklist filter.")
-    parser.add_argument("--frequency", action="store_true", help="Enable Phase 2: frequency analysis.")
-    parser.add_argument("--nlp", action="store_true", help="Enable Phase 3: NLP filter.")
+    parser.add_argument(
+        "--blacklist", action="store_true", help="Enable Phase 1: blacklist filter."
+    )
+    parser.add_argument(
+        "--frequency", action="store_true", help="Enable Phase 2: frequency analysis."
+    )
+    parser.add_argument(
+        "--nlp", action="store_true", help="Enable Phase 3: NLP filter."
+    )
     parser.add_argument("--all", action="store_true", help="Enable all phases.")
-    parser.add_argument("--strip-timestamps", dest="strip_timestamps", action="store_true", help="Strip timestamp markers (standalone, not part of --all).")
-    parser.add_argument("--stats", action="store_true", help="Print token counts before/after each phase.")
-    parser.add_argument("-o", "--output", type=str, default=None, help="Write result to file (default: stdout).")
-    parser.add_argument("--freq-threshold", dest="freq_threshold", type=float, default=0.02, help="Frequency threshold for Phase 2 (default: 0.02).")
+    parser.add_argument(
+        "--strip-timestamps",
+        dest="strip_timestamps",
+        action="store_true",
+        help="Strip timestamp markers (standalone, not part of --all).",
+    )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Print token counts before/after each phase.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        default=None,
+        help="Write result to file (default: stdout).",
+    )
+    parser.add_argument(
+        "--freq-threshold",
+        dest="freq_threshold",
+        type=float,
+        default=0.02,
+        help="Frequency threshold for Phase 2 (default: 0.02).",
+    )
     return parser.parse_args(argv)
 
 
@@ -48,7 +75,10 @@ def _validate_output_not_input(output_path: Path, input_files: list[Path]) -> No
     resolved_output = output_path.resolve()
     for input_file in input_files:
         if input_file.resolve() == resolved_output:
-            print(f"Error: output path is the same as input: {input_file}", file=sys.stderr)
+            print(
+                f"Error: output path is the same as input: {input_file}",
+                file=sys.stderr,
+            )
             sys.exit(2)
 
 
