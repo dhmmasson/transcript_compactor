@@ -14,7 +14,7 @@
 # All tests are RED at this point: parse_args does not exist in main.py yet.
 
 import pytest
-from main import parse_args
+from main import parse_args, main
 
 
 class TestParseArgsRequired:
@@ -26,9 +26,9 @@ class TestParseArgsRequired:
 
 class TestParseArgsDefaults:
     def test_file_is_stored(self):
-        """Nominal: the positional file path is stored on args.file."""
+        """Nominal: the positional file path is stored on args.file as a one-element list."""
         args = parse_args(["transcript.txt"])
-        assert args.file == "transcript.txt"
+        assert args.file == ["transcript.txt"]
 
     def test_blacklist_disabled_by_default(self):
         """--blacklist is off unless explicitly passed."""
@@ -124,3 +124,70 @@ class TestParseArgsFlags:
         assert args.frequency is True
         assert args.stats is True
         assert args.nlp is False
+
+
+class TestParseArgsMultipleFiles:
+    def test_single_file_stored_as_list(self):
+        """Nominal: a single file path is stored as a one-element list."""
+        args = parse_args(["transcript.txt"])
+        assert args.file == ["transcript.txt"]
+
+    def test_multiple_files_stored_as_list(self):
+        """Nominal: multiple positional paths are stored in order."""
+        args = parse_args(["file1.txt", "file2.txt", "file3.txt"])
+        assert args.file == ["file1.txt", "file2.txt", "file3.txt"]
+
+    def test_folder_path_stored_as_list(self):
+        """Nominal: a folder path is accepted — expansion to .txt files is main()'s job."""
+        args = parse_args(["transcripts/"])
+        assert args.file == ["transcripts/"]
+
+
+class TestMainBehavior:
+    def test_missing_file_exits_with_error(self, tmp_path):
+        """Edge case: non-existent input file must exit with a non-zero code."""
+        nonexistent = str(tmp_path / "no_such_file.txt")
+        with pytest.raises(SystemExit) as exc_info:
+            main([nonexistent])
+        assert exc_info.value.code != 0
+
+    def test_output_written_to_stdout(self, tmp_path, capsys):
+        """Nominal: no -o flag → result written to stdout."""
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("Hello world.")
+        main([str(input_file)])
+        captured = capsys.readouterr()
+        assert "Hello world." in captured.out
+
+    def test_output_written_to_file(self, tmp_path):
+        """Nominal: -o flag writes result to the specified file."""
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("Hello world.")
+        output_file = tmp_path / "out.txt"
+        main([str(input_file), "-o", str(output_file)])
+        assert output_file.read_text() == "Hello world."
+
+    def test_output_directory_is_created(self, tmp_path):
+        """Edge case: missing parent directories for -o are created automatically."""
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("Hello world.")
+        output_file = tmp_path / "nested" / "dir" / "out.txt"
+        main([str(input_file), "-o", str(output_file)])
+        assert output_file.exists()
+
+    def test_output_same_as_input_exits_with_error(self, tmp_path):
+        """Safety: output path equal to input path must error to prevent data loss."""
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("Hello world.")
+        with pytest.raises(SystemExit) as exc_info:
+            main([str(input_file), "-o", str(input_file)])
+        assert exc_info.value.code != 0
+
+    def test_existing_output_file_is_overwritten(self, tmp_path):
+        """Nominal: existing output file is overwritten silently."""
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("New content.")
+        output_file = tmp_path / "out.txt"
+        output_file.write_text("Old content.")
+        main([str(input_file), "-o", str(output_file)])
+        assert output_file.read_text() == "New content."
