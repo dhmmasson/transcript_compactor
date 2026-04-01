@@ -1,6 +1,6 @@
 [project]
 name = "transcript_compactor"
-version = "0.2.0"
+version = "0.3.0"
 description = "Compact transcript for llm processing"
 readme = "README.md"
 requires-python = ">=3.13"

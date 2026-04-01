@@ -1,3 +1,15 @@
+## v0.3.0 (2026-04-02)
+
+### Feat
+
+- **cli**: exit with error when no .txt files found in input
+- **blacklist**: preserve multiline structure during blacklist removal
+
+### Refactor
+
+- **blacklist**: extract shared blacklist file reader helper
+- **blacklist**: extract punctuation winner helper
+
 ## v0.2.0 (2026-04-01)
 
 ### Feat
