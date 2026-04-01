@@ -32,11 +32,8 @@ def _extract_trailing_punct(token: str) -> tuple[str, str]:
     return token, ""
 
 
-def apply_blacklist(text: str, blacklist_file: str | None = None) -> str:
-    if not text:
-        return ""
-    blacklist = _load_blacklist(blacklist_file)
-    tokens = text.split()
+def _apply_blacklist_line(line: str, blacklist: set[str]) -> str:
+    tokens = line.split()
 
     # Phase A — classify tokens
     items: list[tuple[str, str, bool]] = []
@@ -81,3 +78,12 @@ def apply_blacklist(text: str, blacklist_file: str | None = None) -> str:
 
     # Phase C — reconstruct
     return " ".join(w + p for w, p in result)
+
+
+def apply_blacklist(text: str, blacklist_file: str | None = None) -> str:
+    if not text:
+        return ""
+
+    blacklist = _load_blacklist(blacklist_file)
+    # Preserve original line structure; punctuation merging stays line-local.
+    return "\n".join(_apply_blacklist_line(line, blacklist) for line in text.split("\n"))
