@@ -42,7 +42,7 @@ All flags are opt-in. No flag disables another.
 
 | Flag | Description |
 |---|---|
-| `file` | required positional — path to transcript `.txt` |
+| `file [file ...]` | one or more `.txt` files **or** a folder path |
 | `--blacklist` | Phase 1: stopwords + fillers + sponsor/intro removal |
 | `--frequency` | Phase 2: high-frequency token removal |
 | `--freq-threshold FLOAT` | cutoff for Phase 2 (default: `0.02`) |
@@ -51,6 +51,34 @@ All flags are opt-in. No flag disables another.
 | `--strip-timestamps` | strip `[00:12]` / `00:12` markers (standalone, not in `--all`) |
 | `-o / --output` | write result to file instead of stdout |
 | `--stats` | print token counts before/after each phase |
+
+### Multiple files and folder input
+
+`file` uses `nargs='+'` so one or more paths are accepted. When a folder is given,
+`main()` expands it to all `.txt` files in that top-level folder (non-recursive).
+`main()` normalises all inputs to a list of `Path` objects early — single-file and
+multi-file cases share the same loop.
+
+**Output strategy with multiple inputs** (not yet implemented, architecture note):
+- Single input + `-o file` → write to that file
+- Single input, no `-o` → stdout
+- Multiple inputs + no `-o` → stdout, files separated by a header line
+- Multiple inputs + `-o path` → `-o` must point to a **folder**; each output is
+  written alongside its input using the same filename
+
+---
+
+## Input / Output Edge Cases
+
+Handled in `main()` before the pipeline runs:
+
+| Situation | Behaviour |
+|---|---|
+| Input file does not exist | `sys.exit(1)` with an error message |
+| Input is a folder | expand to `*.txt` in that folder (non-recursive) |
+| `-o` directory does not exist | create all missing parent directories |
+| `-o` points to the same path as the input | `sys.exit(1)` — prevents data loss |
+| `-o` points to an existing file | overwrite silently |
 
 ---
 
