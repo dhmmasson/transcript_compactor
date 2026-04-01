@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from compactor.blacklist import apply_blacklist
+
 
 @dataclass
 class PipelineConfig:
@@ -12,6 +14,6 @@ class PipelineConfig:
 
 
 def run_pipeline(text: str, config: PipelineConfig) -> str:
-    # Scaffold stage: phases are not wired yet, so the pipeline is pass-through.
-    _ = config
+    if config.blacklist:
+        text = apply_blacklist(text)
     return text

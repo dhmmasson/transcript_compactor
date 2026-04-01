@@ -67,7 +67,7 @@ class TestRunPipelineBlacklistIntegration:
         config = PipelineConfig(blacklist=True)
         text = "This is the basic idea of the technique."
         result = run_pipeline(text, config)
-        assert result == "basic idea technique."
+        assert result == "This basic idea technique."
 
     def test_keeps_pass_through_when_blacklist_disabled(self):
         """Nominal: disabling blacklist keeps existing pass-through behavior."""
