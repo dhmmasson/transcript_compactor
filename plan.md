@@ -6,6 +6,14 @@ CLI tool that takes a YouTube transcript (plain text) and compresses it for LLM 
 Compression is additive: opt-in flags, all off by default, `--all` as the power-user shorthand.
 Run via `uv run main.py` during development, installable via `uv tool install .` once packaged.
 
+## Step Checklist
+
+- [x] Step 1: Scaffold `compactor/` package + pipeline skeleton + CLI
+- [ ] Step 2: Phase 1 — blacklist filter
+- [ ] Step 3: Phase 2 — frequency analysis
+- [ ] Step 4: Phase 3 — NLP filter (spacy)
+- [ ] Step 5: Packaging (hatchling, console script, uv build)
+
 ---
 
 ## File Structure

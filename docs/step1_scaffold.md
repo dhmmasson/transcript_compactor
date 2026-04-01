@@ -164,16 +164,54 @@ return text
 
 ## 5. IMPLEMENTATION NOTES
 
-*(filled in after GREEN step)*
+- Implemented `compactor/__init__.py` to establish package imports.
+- Implemented `compactor/pipeline.py` with:
+    - `PipelineConfig` dataclass defaults matching CLI defaults
+    - `run_pipeline(text, config)` as a strict pass-through scaffold
+- Implemented `main.py` with:
+    - `parse_args(argv=None)` and additive CLI flags
+    - Multi-input support (`file` as `nargs='+'`)
+    - Folder expansion to top-level `*.txt` files
+    - Safety checks for missing inputs and output path conflicts
+    - Output behavior for stdout/file/directory targets
+    - `--all` expansion in orchestration (not parser)
+- Added helper functions to keep `main()` small and readable:
+    - `_resolve_input_files(...)`
+    - `_validate_input_files(...)`
+    - `_resolve_output_path(...)`
+    - `_validate_output_not_input(...)`
 
 ---
 
 ## 6. IMPROVEMENTS
 
-*(filled in after REFACTOR step)*
+- Refactored CLI path validation into helper functions to reduce branching in `main()`.
+- Added explicit typing on helper interfaces for readability and maintainability.
+- Kept behavior unchanged and re-ran test suite after refactor.
+- Added `pytest-cov` as a dev dependency via uv and verified coverage reporting.
+
+Coverage snapshot after refactor:
+- `compactor/pipeline.py`: 100%
+- `main.py`: 92%
+- Total (selected targets): 93%
 
 ---
 
 ## 7. SUMMARY
 
-*(filled in after completion)*
+Step 1 is complete.
+
+Delivered:
+- Package scaffold and pipeline skeleton
+- Testable CLI architecture (`parse_args()` separated from `main()`)
+- Multi-file and folder input handling
+- Core output-path safety guarantees (missing output dirs, overwrite behavior, input/output conflict check)
+
+Quality gates passed:
+- Full test suite green
+- Coverage enabled with `pytest-cov`
+
+What could be improved in a future cycle:
+- Add deterministic ordering tests for folder expansion edge cases
+- Add clearer stderr messages with error codes/constants
+- Add integration tests for mixed file + folder input combinations
