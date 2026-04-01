@@ -1,8 +1,17 @@
 # transcript_compactor
 
-Compact YouTube transcript text for LLM-oriented downstream use.
+transcript_compactor is a tool to compact YouTube transcript text for LLM-oriented workflows. The goal is to reduce transcript size to save tokens while retaining essential content.
 
-The project is being built iteratively. Current behavior is intentionally conservative: Phase 1 removes only a small exact-match blacklist of common determiners.
+This project explores techniques to minimize text length without significant quality loss, including:
+
+- Removing common function words (e.g., the, a, this, that) — testing whether these contribute meaningfully to LLM understanding.
+- Filtering out high-frequency words to reduce redundancy.
+- Eliminating [[weasel words]] and passive constructions using shell scripts.
+- Randomly removing words, inspired by techniques in machine learning where portions of input data (e.g., image patches) are masked during training.
+
+The project is experimental and intended to find the optimal balance between token efficiency and semantic fidelity.
+
+The project is being built iteratively. Current behavior is intentionally conservative: Phase 1 removes only a small exact-match blacklist of common determiners. This is also a test of the development process with AI-generated code and tests, commit discipline, and documentation practices. You can check the [plan](plan.md) for details on the development process and upcoming features as well as the commits for a step-by-step history of the implementation.
 
 ## Current Features
 
