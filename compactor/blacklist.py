@@ -7,22 +7,22 @@ DEFAULT_BLACKLIST: frozenset[str] = frozenset({
 PUNCT_PRIORITY: dict[str, int] = {",": 0, ";": 1, ".": 2, "!": 3, "?": 4}
 
 
+def _read_word_list(path: Path) -> set[str]:
+    return {
+        line.strip().lower()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    }
+
+
 def _load_blacklist(blacklist_file: str | None = None) -> set[str]:
     if blacklist_file is not None:
         path = Path(blacklist_file)
         if path.is_file():
-            return {
-                line.strip().lower()
-                for line in path.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            }
+            return _read_word_list(path)
     local = Path.cwd() / "blacklist.txt"
     if local.is_file():
-        return {
-            line.strip().lower()
-            for line in local.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        }
+        return _read_word_list(local)
     return set(DEFAULT_BLACKLIST)
 
 
@@ -32,11 +32,16 @@ def _extract_trailing_punct(token: str) -> tuple[str, str]:
     return token, ""
 
 
-def apply_blacklist(text: str, blacklist_file: str | None = None) -> str:
-    if not text:
-        return ""
-    blacklist = _load_blacklist(blacklist_file)
-    tokens = text.split()
+def _best_punct(puncts: list[str], existing: str = "") -> str:
+    candidates: list[str] = []
+    if existing:
+        candidates.append(existing)
+    candidates.extend(puncts)
+    return max(candidates, key=lambda c: PUNCT_PRIORITY.get(c, -1))
+
+
+def _apply_blacklist_line(line: str, blacklist: set[str]) -> str:
+    tokens = line.split()
 
     # Phase A — classify tokens
     items: list[tuple[str, str, bool]] = []
@@ -56,28 +61,24 @@ def apply_blacklist(text: str, blacklist_file: str | None = None) -> str:
         else:
             if pending_puncts:
                 if result:
-                    prev_punct = result[-1][1]
-                    all_puncts = []
-                    if prev_punct:
-                        all_puncts.append(prev_punct)
-                    all_puncts.extend(pending_puncts)
-                    best = max(all_puncts, key=lambda c: PUNCT_PRIORITY.get(c, -1))
-                    result[-1][1] = best
+                    result[-1][1] = _best_punct(pending_puncts, existing=result[-1][1])
                 else:
-                    best = max(pending_puncts, key=lambda c: PUNCT_PRIORITY.get(c, -1))
-                    result.append(["", best])
+                    result.append(["", _best_punct(pending_puncts)])
                 pending_puncts = []
             result.append([word, punct])
 
     # Handle trailing pending puncts (removals at end of text)
     if pending_puncts and result:
-        prev_punct = result[-1][1]
-        all_puncts = []
-        if prev_punct:
-            all_puncts.append(prev_punct)
-        all_puncts.extend(pending_puncts)
-        best = max(all_puncts, key=lambda c: PUNCT_PRIORITY.get(c, -1))
-        result[-1][1] = best
+        result[-1][1] = _best_punct(pending_puncts, existing=result[-1][1])
 
     # Phase C — reconstruct
     return " ".join(w + p for w, p in result)
+
+
+def apply_blacklist(text: str, blacklist_file: str | None = None) -> str:
+    if not text:
+        return ""
+
+    blacklist = _load_blacklist(blacklist_file)
+    # Preserve original line structure; punctuation merging stays line-local.
+    return "\n".join(_apply_blacklist_line(line, blacklist) for line in text.split("\n"))

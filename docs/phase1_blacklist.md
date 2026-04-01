@@ -72,6 +72,21 @@ Default fallback blacklist:
 10. Edge: punctuation at boundaries is preserved unless adjacency requires a merge (examples 7 and 8).
 11. Pipeline integration: `blacklist=True` applies the filter.
 12. Pipeline integration: `blacklist=False` is pass-through.
+13. Multiline: preserve single line breaks after removals.
+14. Multiline: preserve blank lines (paragraph boundaries) after removals.
+15. Multiline: punctuation cleanup must not merge punctuation across line boundaries.
+
+## Multiline Fix Plan
+
+Current bug source: `apply_blacklist()` uses `text.split()` and final `' '.join(...)`,
+which collapses all newlines to spaces.
+
+Planned fix:
+1. Process input per line (`text.splitlines(keepends=False)`).
+2. Apply the existing token-removal and punctuation-merge algorithm independently per line.
+3. Reassemble with `"\n".join(...)` so original line structure is preserved.
+4. Keep empty lines unchanged, so paragraph boundaries stay intact.
+5. Keep punctuation merging line-local only.
 
 ## Implementation Plan
 

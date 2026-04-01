@@ -88,3 +88,41 @@ class TestApplyBlacklistSource:
 
         # Assert — only "The" and "the" removed (determiners); "of", "is" stay
         assert result == "idea of method is clear."
+
+
+class TestApplyBlacklistMultiline:
+    def test_preserves_line_breaks_while_removing_blacklisted_words(self, tmp_path, monkeypatch):
+        """Line boundaries should stay intact for transcript readability."""
+        # Arrange
+        monkeypatch.chdir(tmp_path)
+        text = "The cat\nand the dog"
+
+        # Act
+        result = apply_blacklist(text)
+
+        # Assert
+        assert result == "cat\nand dog"
+
+    def test_preserves_blank_lines_after_removals(self, tmp_path, monkeypatch):
+        """Paragraph boundaries (empty lines) should be preserved."""
+        # Arrange
+        monkeypatch.chdir(tmp_path)
+        text = "the cat\n\nthis dog"
+
+        # Act
+        result = apply_blacklist(text)
+
+        # Assert
+        assert result == "cat\n\ndog"
+
+    def test_does_not_merge_punctuation_across_lines(self, tmp_path, monkeypatch):
+        """Punctuation rules apply within a line; line breaks are not collapsed."""
+        # Arrange
+        monkeypatch.chdir(tmp_path)
+        text = "cat,\nthe dog."
+
+        # Act
+        result = apply_blacklist(text)
+
+        # Assert
+        assert result == "cat,\ndog."

@@ -211,3 +211,13 @@ class TestMainBehavior:
         assert "Hello." in captured.out
         assert "World." in captured.out
         assert "Ignored." not in captured.out
+
+    def test_empty_directory_input_exits_with_error(self, tmp_path):
+        """Safety: passing a directory with no .txt files must fail fast."""
+        empty_dir = tmp_path / "empty_transcripts"
+        empty_dir.mkdir()
+
+        with pytest.raises(SystemExit) as exc_info:
+            main([str(empty_dir)])
+
+        assert exc_info.value.code != 0
