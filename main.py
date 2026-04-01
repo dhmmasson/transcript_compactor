@@ -65,6 +65,13 @@ def _resolve_input_files(paths: Iterable[str]) -> list[Path]:
 
 
 def _validate_input_files(input_files: list[Path]) -> None:
+    if not input_files:
+        print(
+            "Error: no .txt input files found from the provided path(s)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     for input_file in input_files:
         if not input_file.exists():
             print(f"Error: file not found: {input_file}", file=sys.stderr)
