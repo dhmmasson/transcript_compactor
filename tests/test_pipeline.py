@@ -59,3 +59,19 @@ class TestRunPipeline:
         text = "Line one.\nLine two.\n\nParagraph two."
         result = run_pipeline(text, config)
         assert result == text
+
+
+class TestRunPipelineBlacklistIntegration:
+    def test_applies_blacklist_when_enabled(self):
+        """Nominal: blacklist-enabled pipeline removes configured stopwords/fillers."""
+        config = PipelineConfig(blacklist=True)
+        text = "This is the basic idea of the technique."
+        result = run_pipeline(text, config)
+        assert result == "basic idea technique."
+
+    def test_keeps_pass_through_when_blacklist_disabled(self):
+        """Nominal: disabling blacklist keeps existing pass-through behavior."""
+        config = PipelineConfig(blacklist=False)
+        text = "This is the basic idea of the technique."
+        result = run_pipeline(text, config)
+        assert result == text
