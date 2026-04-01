@@ -12,4 +12,6 @@ class PipelineConfig:
 
 
 def run_pipeline(text: str, config: PipelineConfig) -> str:
+    # Scaffold stage: phases are not wired yet, so the pipeline is pass-through.
+    _ = config
     return text

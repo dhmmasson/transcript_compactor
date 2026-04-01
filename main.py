@@ -1,6 +1,7 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import Iterable
 
 from compactor.pipeline import PipelineConfig, run_pipeline
 
@@ -25,8 +26,8 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def _resolve_input_files(paths):
-    resolved = []
+def _resolve_input_files(paths: Iterable[str]) -> list[Path]:
+    resolved: list[Path] = []
     for p in paths:
         path = Path(p)
         if path.is_dir():
@@ -34,6 +35,21 @@ def _resolve_input_files(paths):
         else:
             resolved.append(path)
     return resolved
+
+
+def _validate_input_files(input_files: list[Path]) -> None:
+    for input_file in input_files:
+        if not input_file.exists():
+            print(f"Error: file not found: {input_file}", file=sys.stderr)
+            sys.exit(1)
+
+
+def _validate_output_not_input(output_path: Path, input_files: list[Path]) -> None:
+    resolved_output = output_path.resolve()
+    for input_file in input_files:
+        if input_file.resolve() == resolved_output:
+            print(f"Error: output path is the same as input: {input_file}", file=sys.stderr)
+            sys.exit(2)
 
 
 def main(argv=None):
@@ -46,17 +62,10 @@ def main(argv=None):
 
     input_files = _resolve_input_files(args.file)
 
-    for f in input_files:
-        if not Path(f).exists():
-            print(f"Error: file not found: {f}", file=sys.stderr)
-            sys.exit(1)
+    _validate_input_files(input_files)
 
     if args.output is not None:
-        output_path = Path(args.output).resolve()
-        for f in input_files:
-            if Path(f).resolve() == output_path:
-                print(f"Error: output path is the same as input: {f}", file=sys.stderr)
-                sys.exit(2)
+        _validate_output_not_input(Path(args.output), input_files)
 
     config = PipelineConfig(
         blacklist=args.blacklist,
@@ -68,8 +77,8 @@ def main(argv=None):
     )
 
     results = []
-    for f in input_files:
-        text = Path(f).read_text(encoding="utf-8")
+    for input_file in input_files:
+        text = input_file.read_text(encoding="utf-8")
         results.append(run_pipeline(text, config))
 
     output = "\n".join(results)
