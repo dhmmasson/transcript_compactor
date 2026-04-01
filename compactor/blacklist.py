@@ -7,22 +7,22 @@ DEFAULT_BLACKLIST: frozenset[str] = frozenset({
 PUNCT_PRIORITY: dict[str, int] = {",": 0, ";": 1, ".": 2, "!": 3, "?": 4}
 
 
+def _read_word_list(path: Path) -> set[str]:
+    return {
+        line.strip().lower()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    }
+
+
 def _load_blacklist(blacklist_file: str | None = None) -> set[str]:
     if blacklist_file is not None:
         path = Path(blacklist_file)
         if path.is_file():
-            return {
-                line.strip().lower()
-                for line in path.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            }
+            return _read_word_list(path)
     local = Path.cwd() / "blacklist.txt"
     if local.is_file():
-        return {
-            line.strip().lower()
-            for line in local.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        }
+        return _read_word_list(local)
     return set(DEFAULT_BLACKLIST)
 
 
