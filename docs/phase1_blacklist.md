@@ -17,51 +17,46 @@ Quick token stats (lowercased, regex tokenization):
 - Unique tokens: 1117
 - Top words are common function words: `the`, `to`, `and`, `a`, `of`, `we`, `that`, `in`, `is`, `it`
 
-This supports a first-pass blacklist approach with stopwords and filler-like terms.
-
-### Phrase-pattern experiment
-
-The sample transcript includes outro/CTA style lines:
-- "If you liked the video, you can click the like button, and if you want to see more, consider subscribing."
-- "Till next time."
-
-No sponsor segment appears in this specific sample, but sponsor phrases are still part of required feature scope.
+This supports a first-pass blacklist approach with a small, conservative default list.
 
 ### Product decisions captured
 
 From user decisions for this phase:
-1. Intro/outro/sponsor matching removes **only matched words**, not whole sentences.
+1. Phase 1 is just blacklist-based removal. No filler detection or sponsor heuristics.
 2. Matching is **case-insensitive**.
-3. Output text should **normalize whitespace/punctuation artifacts** after removals.
+3. Output text preserves punctuation unless removal creates adjacent punctuation that must be merged.
 
 ## Hypothesis
 
 Phase 1 is a single, simple operation: **remove every token that appears in a blacklist**.
 
-- The blacklist is one flat list of words. No categories, no "fillers", no regex.
+- The blacklist is one flat list of words. No categories, no heuristics, no regex.
 - Matching is **case-insensitive, exact token** (split on whitespace). `the` matches `The` and `THE` but not `them`.
 - Default fallback blacklist (when no file is provided):
-  `the`, `a`, `an`, `of`, `to`, `and`, `in`, `is`, `it`, `that`, `for`, `on`, `with`, `as`, `at`, `by`, `from`, `be`, `are`, `was`, `were`
+  `the`, `a`, `an`, `this`, `that`, `those`, `these`
 - Blacklist source resolution order:
   1. user-provided blacklist file parameter (`blacklist_file=`),
   2. local `blacklist.txt` in the current working directory,
   3. fallback default list above.
-- If the user wants filler words removed, they add them to their blacklist file. That's a user decision, not a code feature.
+- Punctuation attached to removed tokens is preserved.
+- Punctuation is only simplified when removals create adjacent punctuation, and the surviving punctuation is chosen by priority: `,` < `;` < `.` < `!` < `?`.
 - Normalize whitespace after removals (collapse multiple spaces).
 
 ### Example Sentences and Expected Results
 
 Default fallback blacklist:
-`the`, `a`, `an`, `of`, `to`, `and`, `in`, `is`, `it`, `that`, `for`, `on`, `with`, `as`, `at`, `by`, `from`, `be`, `are`, `was`, `were`
+`the`, `a`, `an`, `this`, `that`, `those`, `these`
 
 | # | Input | Output | Why |
 |---|---|---|---|
-| 1 | `This is the basic idea of the technique.` | `This basic idea technique.` | removes `is`, `the` ×2, `of` |
-| 2 | `If you liked the video, click the like button and subscribe.` | `If you liked video, click like button subscribe.` | removes `the` ×2, `and`. `liked` ≠ `like` so both stay. `like` is NOT in the default blacklist. |
-| 3 | `The idea of the method is clear.` | `idea method clear.` | removes `The`, `of`, `the`, `is` |
+| 1 | `This is the basic idea of the technique.` | `is basic idea of technique.` | removes `This`, `the` ×2 |
+| 2 | `If you liked the video, click the like button and subscribe.` | `If you liked video, click like button and subscribe.` | removes `the` ×2 only |
+| 3 | `The idea of the method is clear.` | `idea of method is clear.` | removes `The` and `the` only |
 | 4 | `Erosion gradients generate branching gullies.` | `Erosion gradients generate branching gullies.` | no default blacklist words present — nothing removed |
-| 5 | `Well, this is, like, basically, a test.` | `Well, this like, basically, test.` | removes `is,` → normalizes; removes `a`. `well`, `like`, `basically` are NOT in default blacklist so they stay |
+| 5 | `Well, this is, like, basically, a test.` | `Well, is, like, basically, test.` | removes `this` and `a`; other words stay |
 | 6 | (custom file containing `erosion` + `gradients`) `Erosion gradients generate branching gullies.` | `generate branching gullies.` | custom file overrides defaults |
+| 7 | `cat, the; dog` | `cat; dog` | removal makes `,` and `;` adjacent, so `;` wins |
+| 8 | `cat, the a. this! dog` | `cat! dog` | adjacent punctuation merges by priority until only `!` remains |
 
 ## Planned tests (RED)
 
@@ -74,8 +69,9 @@ Default fallback blacklist:
 7. Nominal: custom blacklist file overrides defaults (example 6).
 8. Edge: local `blacklist.txt` fallback when no parameter given.
 9. Edge: built-in default list used when no file exists at all.
-10. Pipeline integration: `blacklist=True` applies the filter.
-11. Pipeline integration: `blacklist=False` is pass-through.
+10. Edge: punctuation at boundaries is preserved unless adjacency requires a merge (examples 7 and 8).
+11. Pipeline integration: `blacklist=True` applies the filter.
+12. Pipeline integration: `blacklist=False` is pass-through.
 
 ## Implementation Plan
 
@@ -146,3 +142,24 @@ Only `blacklist.py` needs changes.
 
 ### No changes to `main.py`
 CLI already passes `blacklist=True/False` into `PipelineConfig`. No `--blacklist-file` CLI flag yet (planned for later cycle per plan.md).
+
+## Summary
+
+Phase 1 is now implemented and validated.
+
+- `compactor.blacklist.apply_blacklist()` removes exact token matches only.
+- The built-in default blacklist is deliberately conservative: `the`, `a`, `an`, `this`, `that`, `those`, `these`.
+- Custom blacklist files are already supported at the module level.
+- Punctuation is preserved and only merged when removals would otherwise leave adjacent punctuation.
+- The punctuation precedence rule is fully covered by generated YAML test cases.
+
+### Validation
+
+- `uv run pytest -q`: green
+- `uv run pytest --cov=compactor --cov=main --cov-report=term-missing -q`: green, 99% total coverage
+
+### Future improvements
+
+- Add `--blacklist-file PATH` to the CLI so custom lists are available without calling the module directly.
+- Revisit the fallback default list only after testing summary quality on real transcripts.
+- Keep heuristic filler detection as a separate future feature, not part of the blacklist contract.

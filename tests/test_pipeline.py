@@ -1,12 +1,10 @@
-# Tests for compactor/pipeline.py — scaffold step
+# Tests for compactor/pipeline.py — scaffold and phase integration
 #
 # These tests cover:
 #   - PipelineConfig defaults (all phases disabled, correct threshold default)
 #   - run_pipeline pass-through behaviour (no phases enabled → text unchanged)
 #   - Edge cases: empty string, multiline input
 #
-# All tests are RED at this point: compactor.pipeline does not exist yet.
-
 from compactor.pipeline import PipelineConfig, run_pipeline
 
 

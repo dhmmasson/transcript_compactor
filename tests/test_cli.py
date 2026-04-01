@@ -1,4 +1,4 @@
-# Tests for main.py CLI argument parsing — scaffold step
+# Tests for main.py CLI argument parsing and main() behavior
 #
 # These tests cover:
 #   - parse_args() exists and returns a Namespace
@@ -11,8 +11,6 @@
 #   - --stats flag is parsed
 #   - --freq-threshold parsed as float, defaults to 0.02
 #
-# All tests are RED at this point: parse_args does not exist in main.py yet.
-
 import pytest
 from main import parse_args, main
 

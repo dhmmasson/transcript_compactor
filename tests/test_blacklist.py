@@ -1,4 +1,4 @@
-# Tests for compactor/blacklist.py — Phase 1 RED tests
+# Tests for compactor/blacklist.py — Phase 1 blacklist behavior
 #
 # Phase 1 is one operation: remove every token that appears in a blacklist.
 # No filler categories, no regex patterns — just a flat word list.
