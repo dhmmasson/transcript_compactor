@@ -115,6 +115,7 @@ Handled in `main()` before the pipeline runs:
 - The tests are generated from a YAML case file so punctuation precedence is explicit and reviewable.
 - Phase 1 intentionally stays conservative to avoid altering transcript meaning too aggressively.
 - Broader stopword removal, heuristic filler detection, and timestamp stripping remain future work.
+- Maintenance note: multiline input must preserve original line breaks and blank lines; punctuation merging is line-local.
 
 ---
 
