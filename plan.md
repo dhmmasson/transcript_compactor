@@ -67,12 +67,14 @@ All flags are opt-in. No flag disables another.
 `main()` normalises all inputs to a list of `Path` objects early — single-file and
 multi-file cases share the same loop.
 
-**Output strategy with multiple inputs** (not yet implemented, architecture note):
-- Single input + `-o file` → write to that file
-- Single input, no `-o` → stdout
-- Multiple inputs + no `-o` → stdout, files separated by a header line
-- Multiple inputs + `-o path` → `-o` must point to a **folder**; each output is
-  written alongside its input using the same filename
+Safety rule implemented:
+- If folder expansion yields zero `.txt` files, exit with an error instead of producing an empty output silently.
+
+**Output strategy** (design update, to implement in a dedicated cycle):
+- No `--output` provided: create/use `output/` and write one file per input using the same base filename.
+- Single input + `--output file`: write to that explicit file.
+- Multiple inputs + `--output path`: treat `path` as a folder and write one file per input.
+- If output target is ambiguous (for example multiple inputs + output path that exists as a file), exit with a clear error.
 
 ---
 
@@ -184,3 +186,12 @@ Each step follows the RESEARCH → TEST → DOCUMENT → IMPLEMENT → IMPROVE �
 - `--strip-timestamps` is standalone and excluded from `--all` (clipper handles this by default)
 - `apply_blacklist()` already supports a custom blacklist file; wiring that to the CLI is still pending
 - Phase 3 model: `en_core_web_sm` (small, fast); upgrade to `en_core_web_md` if accuracy is insufficient
+
+### Punctuation run handling note (future enhancement)
+
+Current Phase 1 logic prioritizes a single trailing punctuation mark when removals create adjacency.
+This is acceptable for most transcript text, but longer trailing runs such as `word?!` or `word...` are not fully modeled.
+
+Planned follow-up issue:
+- Parse trailing punctuation runs and choose the winner across the full run using priority `,` < `;` < `.` < `!` < `?`.
+- Add generated YAML cases for multi-mark runs to keep behavior explicit and reviewable.
