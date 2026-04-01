@@ -1,0 +1,1 @@
+# Makes compactor a package

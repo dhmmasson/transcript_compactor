@@ -6,6 +6,14 @@ CLI tool that takes a YouTube transcript (plain text) and compresses it for LLM 
 Compression is additive: opt-in flags, all off by default, `--all` as the power-user shorthand.
 Run via `uv run main.py` during development, installable via `uv tool install .` once packaged.
 
+## Step Checklist
+
+- [x] Step 1: Scaffold `compactor/` package + pipeline skeleton + CLI
+- [ ] Step 2: Phase 1 — blacklist filter
+- [ ] Step 3: Phase 2 — frequency analysis
+- [ ] Step 4: Phase 3 — NLP filter (spacy)
+- [ ] Step 5: Packaging (hatchling, console script, uv build)
+
 ---
 
 ## File Structure
@@ -42,7 +50,7 @@ All flags are opt-in. No flag disables another.
 
 | Flag | Description |
 |---|---|
-| `file` | required positional — path to transcript `.txt` |
+| `file [file ...]` | one or more `.txt` files **or** a folder path |
 | `--blacklist` | Phase 1: stopwords + fillers + sponsor/intro removal |
 | `--frequency` | Phase 2: high-frequency token removal |
 | `--freq-threshold FLOAT` | cutoff for Phase 2 (default: `0.02`) |
@@ -51,6 +59,34 @@ All flags are opt-in. No flag disables another.
 | `--strip-timestamps` | strip `[00:12]` / `00:12` markers (standalone, not in `--all`) |
 | `-o / --output` | write result to file instead of stdout |
 | `--stats` | print token counts before/after each phase |
+
+### Multiple files and folder input
+
+`file` uses `nargs='+'` so one or more paths are accepted. When a folder is given,
+`main()` expands it to all `.txt` files in that top-level folder (non-recursive).
+`main()` normalises all inputs to a list of `Path` objects early — single-file and
+multi-file cases share the same loop.
+
+**Output strategy with multiple inputs** (not yet implemented, architecture note):
+- Single input + `-o file` → write to that file
+- Single input, no `-o` → stdout
+- Multiple inputs + no `-o` → stdout, files separated by a header line
+- Multiple inputs + `-o path` → `-o` must point to a **folder**; each output is
+  written alongside its input using the same filename
+
+---
+
+## Input / Output Edge Cases
+
+Handled in `main()` before the pipeline runs:
+
+| Situation | Behaviour |
+|---|---|
+| Input file does not exist | `sys.exit(1)` with an error message |
+| Input is a folder | expand to `*.txt` in that folder (non-recursive) |
+| `-o` directory does not exist | create all missing parent directories |
+| `-o` points to the same path as the input | `sys.exit(1)` — prevents data loss |
+| `-o` points to an existing file | overwrite silently |
 
 ---
 

@@ -11,7 +11,7 @@
 - [x] Added README.md
 - [x] Added MIT LICENSE
 - [x] Wrote plan.md
-- [ ] Step 1: Scaffold compactor/ package + pipeline skeleton + CLI
+- [x] Step 1: Scaffold compactor/ package + pipeline skeleton + CLI
 - [ ] Step 2: Phase 1 — blacklist filter
 - [ ] Step 3: Phase 2 — frequency analysis
 - [ ] Step 4: Phase 3 — NLP filter (spacy)
