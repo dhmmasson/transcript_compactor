@@ -88,4 +88,15 @@
 - rationale: Blacklisted word removed between non-adjacent puncts — no merge needed
   input: cat, dog the run.
   output: cat, dog run.
+- rationale: Trailing blacklisted word with punct merges into last kept word's existing
+    punct
+  input: cat. the,
+  output: cat.
+- rationale: Trailing blacklisted word with higher-priority punct replaces last kept
+    word's punct
+  input: cat, the!
+  output: cat!
+- rationale: Multiple trailing blacklisted words — highest priority punct wins
+  input: cat, the. a!
+  output: cat!
 
