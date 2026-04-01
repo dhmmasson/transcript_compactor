@@ -32,6 +32,14 @@ def _extract_trailing_punct(token: str) -> tuple[str, str]:
     return token, ""
 
 
+def _best_punct(puncts: list[str], existing: str = "") -> str:
+    candidates: list[str] = []
+    if existing:
+        candidates.append(existing)
+    candidates.extend(puncts)
+    return max(candidates, key=lambda c: PUNCT_PRIORITY.get(c, -1))
+
+
 def _apply_blacklist_line(line: str, blacklist: set[str]) -> str:
     tokens = line.split()
 
@@ -53,28 +61,15 @@ def _apply_blacklist_line(line: str, blacklist: set[str]) -> str:
         else:
             if pending_puncts:
                 if result:
-                    prev_punct = result[-1][1]
-                    all_puncts = []
-                    if prev_punct:
-                        all_puncts.append(prev_punct)
-                    all_puncts.extend(pending_puncts)
-                    best = max(all_puncts, key=lambda c: PUNCT_PRIORITY.get(c, -1))
-                    result[-1][1] = best
+                    result[-1][1] = _best_punct(pending_puncts, existing=result[-1][1])
                 else:
-                    best = max(pending_puncts, key=lambda c: PUNCT_PRIORITY.get(c, -1))
-                    result.append(["", best])
+                    result.append(["", _best_punct(pending_puncts)])
                 pending_puncts = []
             result.append([word, punct])
 
     # Handle trailing pending puncts (removals at end of text)
     if pending_puncts and result:
-        prev_punct = result[-1][1]
-        all_puncts = []
-        if prev_punct:
-            all_puncts.append(prev_punct)
-        all_puncts.extend(pending_puncts)
-        best = max(all_puncts, key=lambda c: PUNCT_PRIORITY.get(c, -1))
-        result[-1][1] = best
+        result[-1][1] = _best_punct(pending_puncts, existing=result[-1][1])
 
     # Phase C — reconstruct
     return " ".join(w + p for w, p in result)
