@@ -1,12 +1,10 @@
-# Tests for compactor/pipeline.py — scaffold step
+# Tests for compactor/pipeline.py — scaffold and phase integration
 #
 # These tests cover:
 #   - PipelineConfig defaults (all phases disabled, correct threshold default)
 #   - run_pipeline pass-through behaviour (no phases enabled → text unchanged)
 #   - Edge cases: empty string, multiline input
 #
-# All tests are RED at this point: compactor.pipeline does not exist yet.
-
 from compactor.pipeline import PipelineConfig, run_pipeline
 
 
@@ -57,5 +55,21 @@ class TestRunPipeline:
         """Edge case: newlines and multiple paragraphs are preserved as-is."""
         config = PipelineConfig()
         text = "Line one.\nLine two.\n\nParagraph two."
+        result = run_pipeline(text, config)
+        assert result == text
+
+
+class TestRunPipelineBlacklistIntegration:
+    def test_applies_blacklist_when_enabled(self):
+        """Nominal: blacklist-enabled pipeline removes determiners."""
+        config = PipelineConfig(blacklist=True)
+        text = "This is the basic idea of the technique."
+        result = run_pipeline(text, config)
+        assert result == "is basic idea of technique."
+
+    def test_keeps_pass_through_when_blacklist_disabled(self):
+        """Nominal: disabling blacklist keeps existing pass-through behavior."""
+        config = PipelineConfig(blacklist=False)
+        text = "This is the basic idea of the technique."
         result = run_pipeline(text, config)
         assert result == text

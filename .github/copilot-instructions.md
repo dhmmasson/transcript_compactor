@@ -12,7 +12,7 @@
 - [x] Added MIT LICENSE
 - [x] Wrote plan.md
 - [x] Step 1: Scaffold compactor/ package + pipeline skeleton + CLI
-- [ ] Step 2: Phase 1 — blacklist filter
+- [x] Step 2: Phase 1 — blacklist filter
 - [ ] Step 3: Phase 2 — frequency analysis
 - [ ] Step 4: Phase 3 — NLP filter (spacy)
 - [ ] Step 5: Packaging (hatchling, console script, uv build)
@@ -131,3 +131,10 @@ transcript-compactor transcripts/transcript1.txt --all
 - Phases 1 and 2: stdlib only, no new deps
 - Phase 3: `uv add spacy` (added only when Phase 3 is implemented)
 - Packaging: hatchling (build backend)
+
+## Current Phase 1 Contract
+
+- Phase 1 is exact-match blacklist removal only.
+- No filler-word heuristics, sponsor detection, or regex-based sentence filtering are part of this cycle.
+- Default fallback blacklist is conservative: `the`, `a`, `an`, `this`, `that`, `those`, `these`.
+- Punctuation is preserved unless blacklist removals create adjacent punctuation, in which case the highest-priority mark survives: `,` < `;` < `.` < `!` < `?`.

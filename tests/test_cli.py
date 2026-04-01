@@ -1,4 +1,4 @@
-# Tests for main.py CLI argument parsing — scaffold step
+# Tests for main.py CLI argument parsing and main() behavior
 #
 # These tests cover:
 #   - parse_args() exists and returns a Namespace
@@ -11,8 +11,6 @@
 #   - --stats flag is parsed
 #   - --freq-threshold parsed as float, defaults to 0.02
 #
-# All tests are RED at this point: parse_args does not exist in main.py yet.
-
 import pytest
 from main import parse_args, main
 
@@ -191,3 +189,25 @@ class TestMainBehavior:
         output_file.write_text("Old content.")
         main([str(input_file), "-o", str(output_file)])
         assert output_file.read_text() == "New content."
+
+    def test_all_flag_enables_all_phases_in_main(self, tmp_path, capsys):
+        """Coverage: --all sets blacklist/frequency/nlp inside main()."""
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("The cat.")
+        main([str(input_file), "--all"])
+        captured = capsys.readouterr()
+        # blacklist is active → "The" removed
+        assert "cat." in captured.out
+
+    def test_directory_input_expands_txt_files(self, tmp_path, capsys):
+        """Coverage: passing a directory globs all .txt files inside it."""
+        sub = tmp_path / "transcripts"
+        sub.mkdir()
+        (sub / "a.txt").write_text("Hello.")
+        (sub / "b.txt").write_text("World.")
+        (sub / "c.csv").write_text("Ignored.")  # non-txt
+        main([str(sub)])
+        captured = capsys.readouterr()
+        assert "Hello." in captured.out
+        assert "World." in captured.out
+        assert "Ignored." not in captured.out

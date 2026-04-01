@@ -9,7 +9,7 @@ Run via `uv run main.py` during development, installable via `uv tool install .`
 ## Step Checklist
 
 - [x] Step 1: Scaffold `compactor/` package + pipeline skeleton + CLI
-- [ ] Step 2: Phase 1 — blacklist filter
+- [x] Step 2: Phase 1 — blacklist filter
 - [ ] Step 3: Phase 2 — frequency analysis
 - [ ] Step 4: Phase 3 — NLP filter (spacy)
 - [ ] Step 5: Packaging (hatchling, console script, uv build)
@@ -27,11 +27,10 @@ transcript_compactor/
 │   ├── blacklist.py               ← Phase 1
 │   ├── frequency.py               ← Phase 2
 │   ├── nlp_filter.py              ← Phase 3
-│   └── data/
-│       ├── stopwords.txt          ← articles, copulas, prepositions
-│       └── fillers.txt            ← "um", "uh", "like", "you know" …
 ├── tests/
 │   ├── test_blacklist.py
+│   ├── blacklist_cases.yaml
+│   ├── generate_blacklist_cases.py
 │   ├── test_frequency.py
 │   ├── test_nlp_filter.py
 │   └── test_pipeline.py
@@ -51,8 +50,8 @@ All flags are opt-in. No flag disables another.
 | Flag | Description |
 |---|---|
 | `file [file ...]` | one or more `.txt` files **or** a folder path |
-| `--blacklist` | Phase 1: stopwords + fillers + sponsor/intro removal |
-| `--blacklist-file PATH` | custom blacklist words file (one word/line), used by `--blacklist` |
+| `--blacklist` | Phase 1: exact-match blacklist removal |
+| `--blacklist-file PATH` | planned: custom blacklist words file for Phase 1 |
 | `--frequency` | Phase 2: high-frequency token removal |
 | `--freq-threshold FLOAT` | cutoff for Phase 2 (default: `0.02`) |
 | `--nlp` | Phase 3: spaCy POS-based filtering |
@@ -96,25 +95,26 @@ Handled in `main()` before the pipeline runs:
 **Module**: `compactor/blacklist.py`
 
 1. Token-level removal using a customizable blacklist source
-    - Resolution order:
-       1. `--blacklist-file PATH` (CLI override)
-       2. local `blacklist.txt` in working directory
-       3. built-in fallback defaults
-    - Built-in fallback defaults (explicit):
-       `the`, `a`, `an`, `of`, `to`, `and`, `in`, `is`, `it`, `that`, `for`, `on`, `with`, `as`, `at`, `by`, `from`, `be`, `are`, `was`, `were`
-2. Token-level removal using `data/fillers.txt` ("um", "uh", "like", "you know", "basically"…)
-3. Sentence-level regex filter: sponsor / intro / outro patterns
-   - "sponsored by", "use code", "promo code"
-   - "hello everyone", "welcome back", "in today's video"
-   - "don't forget to like", "hit the subscribe button", "see you in the next"
-4. Optional timestamp stripping via `--strip-timestamps` (`[00:12]`, `0:12`, `00:12:34` patterns)
+   - Resolution order:
+      1. explicit `blacklist_file` parameter in `apply_blacklist()`
+      2. local `blacklist.txt` in working directory
+      3. built-in fallback defaults
+   - Built-in fallback defaults (explicit):
+      `the`, `a`, `an`, `this`, `that`, `those`, `these`
+2. Matching is case-insensitive and exact-token only
+   - `the` matches `The`
+   - `the` does not match `them`
+3. Trailing punctuation on removed words is preserved and merged only when adjacent punctuation would otherwise remain
+   - Merge priority: `,` < `;` < `.` < `!` < `?`
+4. CLI currently exposes `--blacklist` only
+   - A future cycle can add `--blacklist-file PATH` to the CLI without changing the blacklist module contract
 
 ### Phase 1 architecture notes
 
-- Blacklist file format: UTF-8 text, one word or phrase per line; empty lines and `#` comments ignored.
-- Matching remains case-insensitive.
-- Tests must read the active blacklist source so behavior validates against the real loaded list.
-- A later validation task will ensure default blacklist coverage remains sufficient.
+- Blacklist file format: UTF-8 text, one word per line; blank lines are ignored.
+- The tests are generated from a YAML case file so punctuation precedence is explicit and reviewable.
+- Phase 1 intentionally stays conservative to avoid altering transcript meaning too aggressively.
+- Broader stopword removal, heuristic filler detection, and timestamp stripping remain future work.
 
 ---
 
@@ -169,7 +169,7 @@ Each step follows the RESEARCH → TEST → DOCUMENT → IMPLEMENT → IMPROVE �
 | Step | Scope | New deps |
 |---|---|---|
 | 1 | Scaffold: `compactor/` package, `pipeline.py` skeleton, CLI in `main.py` | — |
-| 2 | Phase 1: blacklist + data files + sentence-level filter | — |
+| 2 | Phase 1: exact-match blacklist + punctuation merging | — |
 | 3 | Phase 2: frequency analysis | — |
 | 4 | Phase 3: NLP filter | `spacy` |
 | 5 | Packaging: build-system, console script, `uv build` validation | hatchling |
@@ -181,4 +181,5 @@ Each step follows the RESEARCH → TEST → DOCUMENT → IMPLEMENT → IMPROVE �
 - Input assumed UTF-8 plain text, one paragraph per line (typical YouTube export)
 - Sentences are preserved as units; token removal is within sentences
 - `--strip-timestamps` is standalone and excluded from `--all` (clipper handles this by default)
+- `apply_blacklist()` already supports a custom blacklist file; wiring that to the CLI is still pending
 - Phase 3 model: `en_core_web_sm` (small, fast); upgrade to `en_core_web_md` if accuracy is insufficient

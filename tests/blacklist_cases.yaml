@@ -1,0 +1,102 @@
+- rationale: Single blacklisted word between two white words is removed
+  input: cat the dog
+  output: cat dog
+- rationale: Multiple blacklisted words removed, white words kept
+  input: the cat a dog an run
+  output: cat dog run
+- rationale: 'Case-insensitive: uppercase blacklisted word removed'
+  input: The cat A dog
+  output: cat dog
+- rationale: No blacklisted words — input unchanged
+  input: cat dog run big
+  output: cat dog run big
+- rationale: All words blacklisted — result is empty
+  input: the a an this that
+  output: ''
+- rationale: Empty input — empty output
+  input: ''
+  output: ''
+- rationale: Trailing period on blacklisted word at end → period attaches to previous
+    word
+  input: cat the.
+  output: cat.
+- rationale: Trailing comma on blacklisted word in middle → comma attaches to previous
+    word
+  input: cat the, dog
+  output: cat, dog
+- rationale: Blacklisted word with trailing punctuation at start → punctuation kept
+    on next word
+  input: the, cat dog
+  output: ', cat dog'
+- rationale: Adjacent ',' and ';' after removal → keep ';' (higher priority)
+  input: cat, the; dog
+  output: cat; dog
+- rationale: Adjacent ',' and '.' after removal → keep '.' (higher priority)
+  input: cat, the. dog
+  output: cat. dog
+- rationale: Adjacent ',' and '!' after removal → keep '!' (higher priority)
+  input: cat, the! dog
+  output: cat! dog
+- rationale: Adjacent ',' and '?' after removal → keep '?' (higher priority)
+  input: cat, the? dog
+  output: cat? dog
+- rationale: Adjacent ';' and '.' after removal → keep '.' (higher priority)
+  input: cat; the. dog
+  output: cat. dog
+- rationale: Adjacent ';' and '!' after removal → keep '!' (higher priority)
+  input: cat; the! dog
+  output: cat! dog
+- rationale: Adjacent ';' and '?' after removal → keep '?' (higher priority)
+  input: cat; the? dog
+  output: cat? dog
+- rationale: Adjacent '.' and '!' after removal → keep '!' (higher priority)
+  input: cat. the! dog
+  output: cat! dog
+- rationale: Adjacent '.' and '?' after removal → keep '?' (higher priority)
+  input: cat. the? dog
+  output: cat? dog
+- rationale: Adjacent '!' and '?' after removal → keep '?' (higher priority)
+  input: cat! the? dog
+  output: cat? dog
+- rationale: Two adjacent ',' after removal → collapse to one ','
+  input: cat, the, dog
+  output: cat, dog
+- rationale: Two adjacent ';' after removal → collapse to one ';'
+  input: cat; the; dog
+  output: cat; dog
+- rationale: Two adjacent '.' after removal → collapse to one '.'
+  input: cat. the. dog
+  output: cat. dog
+- rationale: Two adjacent '!' after removal → collapse to one '!'
+  input: cat! the! dog
+  output: cat! dog
+- rationale: Two adjacent '?' after removal → collapse to one '?'
+  input: cat? the? dog
+  output: cat? dog
+- rationale: Two consecutive blacklisted words removed, punctuation from each merges
+  input: cat, the a. dog
+  output: cat. dog
+- rationale: Blacklisted word between two punctuated white words — no adjacent punct
+  input: cat, an dog.
+  output: cat, dog.
+- rationale: Three consecutive blacklisted words with mixed punctuation
+  input: cat, the; a. this! dog
+  output: cat! dog
+- rationale: Non-adjacent punctuation marks are both preserved
+  input: cat, dog. run
+  output: cat, dog. run
+- rationale: Blacklisted word removed between non-adjacent puncts — no merge needed
+  input: cat, dog the run.
+  output: cat, dog run.
+- rationale: Trailing blacklisted word with punct merges into last kept word's existing
+    punct
+  input: cat. the,
+  output: cat.
+- rationale: Trailing blacklisted word with higher-priority punct replaces last kept
+    word's punct
+  input: cat, the!
+  output: cat!
+- rationale: Multiple trailing blacklisted words — highest priority punct wins
+  input: cat, the. a!
+  output: cat!
+
