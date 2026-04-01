@@ -77,6 +77,47 @@ Default fallback blacklist:
 10. Pipeline integration: `blacklist=True` applies the filter.
 11. Pipeline integration: `blacklist=False` is pass-through.
 
-## Implementation notes (to be completed in Step 4)
+## Implementation Plan
 
-TBD after failing tests are finalized.
+### `compactor/blacklist.py` — single module, two functions
+
+**Constants**:
+- `DEFAULT_BLACKLIST`: a `frozenset` containing the 21 default words listed in the hypothesis.
+
+**`_load_blacklist(blacklist_file: str | None) -> set[str]`** (private):
+1. If `blacklist_file` is provided and exists → read it, return `set` of lowercased non-empty lines.
+2. Else if `blacklist.txt` exists in `Path.cwd()` → read it, same format.
+3. Else → return `DEFAULT_BLACKLIST`.
+- File format: one word per line, UTF-8. Blank lines and leading/trailing whitespace ignored.
+
+**`apply_blacklist(text: str, blacklist_file: str | None = None) -> str`** (public):
+1. Call `_load_blacklist(blacklist_file)` to get the word set.
+2. If `text` is empty, return `""` immediately.
+3. Split `text` on whitespace (`str.split()`).
+4. For each token:
+   - Strip punctuation from the token to get bare word (e.g. `"is,"` → `"is"`).
+   - Compare bare word (lowercased) against the blacklist set.
+   - If match → drop the entire token (including its punctuation).
+   - If no match → keep the token as-is.
+5. Join surviving tokens with single space.
+6. Return result.
+
+**Punctuation handling detail** (critical for test correctness):
+- Example 5: `"is,"` → bare word `"is"` matches → entire token `"is,"` is removed.
+- This means `"Well, this is, like, basically, a test."` → remove `"is,"` and `"a"` → `"Well, this like, basically, test."` ✓
+- Punctuation stripping uses `str.strip(string.punctuation)` for the comparison only; the original token (with punctuation) is what gets kept or dropped.
+
+### `compactor/pipeline.py` — wire the blacklist phase
+
+Replace the pass-through scaffold with:
+```python
+def run_pipeline(text: str, config: PipelineConfig) -> str:
+    if config.blacklist:
+        text = apply_blacklist(text)
+    return text
+```
+
+Import `apply_blacklist` from `compactor.blacklist`.
+
+### No changes to `main.py`
+CLI already passes `blacklist=True/False` into `PipelineConfig`. No `--blacklist-file` CLI flag yet (planned for later cycle per plan.md).
