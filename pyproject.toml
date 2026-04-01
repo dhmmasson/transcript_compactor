@@ -1,0 +1,20 @@
+[project]
+name = "transcript_compactor"
+version = "0.0.1"
+description = "Compact transcript for llm processing"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+authors = ["dhmmasson"]
+license = {text = "MIT"}
+
+[tool.uv]
+# uv-specific configuration can be added here
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver2"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true
